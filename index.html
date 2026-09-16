@@ -1,0 +1,1017 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>CarMatch — 나만의 자동차 브랜드 찾기</title>
+  <meta name="description" content="소비자 기호에 맞는 자동차 브랜드를 추천해드립니다. 간단한 4가지 질문으로 나에게 딱 맞는 브랜드를 발견하세요." />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@300;400;500;700;900&family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet" />
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --bg:       #07070f;
+      --bg2:      #0e0e1c;
+      --bg3:      #141428;
+      --surface:  rgba(255,255,255,0.04);
+      --border:   rgba(255,255,255,0.08);
+      --blue:     #4f8ef7;
+      --purple:   #a259ff;
+      --cyan:     #22d3ee;
+      --text:     #f0f0f8;
+      --muted:    #8888aa;
+      --grad:     linear-gradient(135deg, #4f8ef7, #a259ff);
+    }
+
+    html { scroll-behavior: smooth; }
+
+    body {
+      font-family: 'Noto Sans KR', 'Inter', sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      min-height: 100vh;
+      overflow-x: hidden;
+    }
+
+    /* ── Noise overlay ── */
+    body::before {
+      content: '';
+      position: fixed; inset: 0;
+      background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='0.04'/%3E%3C/svg%3E");
+      pointer-events: none; z-index: 0; opacity: .5;
+    }
+
+    /* ── Glow orbs ── */
+    .orb {
+      position: fixed; border-radius: 50%;
+      filter: blur(120px); pointer-events: none; z-index: 0;
+    }
+    .orb-1 { width: 600px; height: 600px; background: rgba(79,142,247,.12); top: -200px; left: -200px; }
+    .orb-2 { width: 500px; height: 500px; background: rgba(162,89,255,.10); bottom: -150px; right: -150px; }
+
+    /* ══════════════ HERO ══════════════ */
+    #hero {
+      position: relative; min-height: 100vh;
+      display: flex; flex-direction: column;
+      align-items: center; justify-content: center;
+      text-align: center; padding: 2rem;
+      z-index: 1;
+    }
+
+    .hero-bg {
+      position: absolute; inset: 0; overflow: hidden;
+    }
+    .hero-bg img {
+      width: 100%; height: 100%; object-fit: cover;
+      opacity: .18; filter: saturate(1.4) brightness(.7);
+      transition: opacity 1s;
+    }
+    .hero-bg::after {
+      content: '';
+      position: absolute; inset: 0;
+      background: linear-gradient(to bottom, rgba(7,7,15,.2) 0%, rgba(7,7,15,.85) 100%);
+    }
+
+    .hero-badge {
+      display: inline-flex; align-items: center; gap: .5rem;
+      border: 1px solid rgba(79,142,247,.4);
+      background: rgba(79,142,247,.08);
+      border-radius: 999px; padding: .35rem 1rem;
+      font-size: .78rem; font-weight: 600; letter-spacing: .08em;
+      text-transform: uppercase; color: var(--blue);
+      margin-bottom: 1.8rem; backdrop-filter: blur(8px);
+      animation: fadeUp .7s ease both;
+    }
+    .hero-badge span { width: 7px; height: 7px; border-radius: 50%; background: var(--blue); animation: pulse 2s infinite; }
+
+    h1.hero-title {
+      font-size: clamp(2.6rem, 7vw, 5.5rem);
+      font-weight: 900; line-height: 1.08;
+      letter-spacing: -.03em;
+      animation: fadeUp .7s .1s ease both;
+    }
+    h1.hero-title .grad { background: var(--grad); -webkit-background-clip: text; -webkit-text-fill-color: transparent; }
+
+    .hero-sub {
+      max-width: 560px; margin: 1.4rem auto 2.8rem;
+      font-size: 1.1rem; color: var(--muted); line-height: 1.7;
+      font-weight: 400;
+      animation: fadeUp .7s .2s ease both;
+    }
+
+    .btn-primary {
+      display: inline-flex; align-items: center; gap: .7rem;
+      background: var(--grad); color: #fff;
+      border: none; border-radius: 999px;
+      padding: 1rem 2.4rem; font-size: 1.05rem; font-weight: 700;
+      cursor: pointer; transition: transform .2s, box-shadow .2s;
+      box-shadow: 0 0 40px rgba(79,142,247,.3);
+      animation: fadeUp .7s .3s ease both;
+      font-family: inherit; letter-spacing: -.01em;
+    }
+    .btn-primary:hover { transform: translateY(-3px) scale(1.02); box-shadow: 0 0 60px rgba(79,142,247,.45); }
+    .btn-primary:active { transform: scale(.97); }
+    .btn-icon { font-size: 1.3rem; }
+
+    .hero-brands {
+      display: flex; gap: 2rem; margin-top: 4rem;
+      flex-wrap: wrap; justify-content: center;
+      animation: fadeUp .7s .5s ease both;
+    }
+    .hero-brand-chip {
+      font-size: .8rem; color: var(--muted); letter-spacing: .04em;
+    }
+    .hero-brands .sep { color: rgba(255,255,255,.15); }
+
+    /* ══════════════ QUIZ ══════════════ */
+    #quiz {
+      display: none; position: relative; z-index: 1;
+      min-height: 100vh; padding: 2rem 1rem 4rem;
+      align-items: center; justify-content: center; flex-direction: column;
+    }
+    #quiz.active { display: flex; }
+
+    .quiz-wrap {
+      width: 100%; max-width: 760px;
+    }
+
+    .quiz-header {
+      display: flex; align-items: center; justify-content: space-between;
+      margin-bottom: 2.4rem;
+    }
+    .quiz-step-label {
+      font-size: .8rem; color: var(--muted); font-weight: 600;
+      letter-spacing: .08em; text-transform: uppercase;
+    }
+    .quiz-back-btn {
+      background: none; border: 1px solid var(--border);
+      border-radius: 999px; color: var(--muted);
+      padding: .4rem .9rem; font-size: .82rem; cursor: pointer;
+      font-family: inherit; transition: all .2s;
+    }
+    .quiz-back-btn:hover { border-color: var(--blue); color: var(--blue); }
+
+    /* Progress bar */
+    .progress-track {
+      width: 100%; height: 4px; background: rgba(255,255,255,.06);
+      border-radius: 2px; margin-bottom: 2.8rem; overflow: hidden;
+    }
+    .progress-fill {
+      height: 100%; background: var(--grad);
+      border-radius: 2px; transition: width .5s cubic-bezier(.72,.18,.24,.98);
+    }
+
+    .quiz-q {
+      font-size: clamp(1.35rem, 4vw, 1.9rem);
+      font-weight: 800; margin-bottom: .6rem;
+      letter-spacing: -.02em; line-height: 1.3;
+    }
+    .quiz-q-sub { font-size: .95rem; color: var(--muted); margin-bottom: 2rem; }
+
+    .options-grid {
+      display: grid; grid-template-columns: 1fr 1fr;
+      gap: 1rem;
+    }
+    @media(max-width:500px){ .options-grid { grid-template-columns: 1fr; } }
+
+    .option-card {
+      background: var(--surface); border: 1.5px solid var(--border);
+      border-radius: 1.2rem; padding: 1.4rem 1.2rem;
+      cursor: pointer; transition: all .22s cubic-bezier(.4,0,.2,1);
+      display: flex; align-items: flex-start; gap: 1rem;
+      backdrop-filter: blur(10px);
+      animation: fadeUp .4s ease both;
+    }
+    .option-card:hover {
+      border-color: var(--blue); background: rgba(79,142,247,.08);
+      transform: translateY(-3px); box-shadow: 0 8px 30px rgba(79,142,247,.15);
+    }
+    .option-card.selected {
+      border-color: var(--blue); background: rgba(79,142,247,.12);
+      box-shadow: 0 0 0 4px rgba(79,142,247,.18), 0 8px 30px rgba(79,142,247,.2);
+    }
+    .opt-icon { font-size: 2rem; flex-shrink: 0; }
+    .opt-texts {}
+    .opt-title { font-size: 1rem; font-weight: 700; margin-bottom: .2rem; }
+    .opt-desc { font-size: .82rem; color: var(--muted); line-height: 1.5; }
+
+    .quiz-next-wrap { margin-top: 2rem; text-align: right; }
+    .btn-next {
+      background: var(--grad); color: #fff; border: none;
+      border-radius: 999px; padding: .85rem 2rem;
+      font-size: .98rem; font-weight: 700; cursor: pointer;
+      font-family: inherit; transition: all .2s;
+      box-shadow: 0 4px 20px rgba(79,142,247,.25);
+      opacity: 0; pointer-events: none; transform: translateY(6px);
+      transition: all .3s;
+    }
+    .btn-next.visible { opacity: 1; pointer-events: auto; transform: none; }
+    .btn-next:hover { transform: translateY(-2px); box-shadow: 0 8px 30px rgba(79,142,247,.4); }
+
+    /* ══════════════ RESULTS ══════════════ */
+    #results {
+      display: none; position: relative; z-index: 1;
+      padding: 4rem 1.5rem 6rem;
+    }
+    #results.active { display: block; }
+
+    .results-header {
+      text-align: center; margin-bottom: 1rem;
+    }
+    .results-eyebrow {
+      font-size: .78rem; font-weight: 700; letter-spacing: .10em;
+      text-transform: uppercase; color: var(--blue);
+      margin-bottom: .8rem;
+    }
+    .results-title {
+      font-size: clamp(2rem, 5vw, 3.2rem);
+      font-weight: 900; letter-spacing: -.03em; line-height: 1.1;
+      margin-bottom: 1rem;
+    }
+    .results-sub { color: var(--muted); font-size: 1rem; margin-bottom: 3rem; }
+
+    /* TOP 3 podium */
+    .podium {
+      display: grid; grid-template-columns: 1fr 1.1fr 1fr;
+      gap: 1rem; max-width: 900px; margin: 0 auto 4rem;
+      align-items: end;
+    }
+    @media(max-width:600px){ .podium { grid-template-columns: 1fr; align-items: stretch; } }
+
+    .podium-card {
+      border-radius: 1.5rem; overflow: hidden;
+      border: 1.5px solid var(--border);
+      position: relative; cursor: pointer;
+      transition: transform .3s, box-shadow .3s;
+    }
+    .podium-card:hover { transform: translateY(-6px); box-shadow: 0 20px 60px rgba(0,0,0,.5); }
+    .podium-card.rank-1 {
+      border-color: rgba(250,200,50,.4);
+      box-shadow: 0 0 40px rgba(250,200,50,.15);
+    }
+    .podium-card.rank-2 { border-color: rgba(180,180,200,.3); }
+    .podium-card.rank-3 { border-color: rgba(200,140,80,.3); }
+
+    .podium-img-wrap {
+      width: 100%; aspect-ratio: 16/9; overflow: hidden; position: relative;
+    }
+    .podium-img-wrap img {
+      width: 100%; height: 100%; object-fit: cover;
+      transition: transform .5s; filter: brightness(.85) saturate(1.1);
+    }
+    .podium-card:hover .podium-img-wrap img { transform: scale(1.06); }
+    .podium-img-wrap::after {
+      content: ''; position: absolute; inset: 0;
+      background: linear-gradient(to top, rgba(0,0,0,.8) 0%, transparent 55%);
+    }
+
+    .podium-rank-badge {
+      position: absolute; top: .8rem; left: .8rem;
+      font-size: .72rem; font-weight: 800; letter-spacing: .06em;
+      text-transform: uppercase; padding: .3rem .75rem;
+      border-radius: 999px; z-index: 2;
+    }
+    .rank-1 .podium-rank-badge { background: rgba(250,200,50,.9); color: #111; }
+    .rank-2 .podium-rank-badge { background: rgba(200,200,220,.85); color: #111; }
+    .rank-3 .podium-rank-badge { background: rgba(200,140,80,.85); color: #fff; }
+
+    .match-percent {
+      position: absolute; bottom: .8rem; right: .8rem;
+      font-size: 1.5rem; font-weight: 900; z-index: 2;
+      text-shadow: 0 2px 8px rgba(0,0,0,.4);
+    }
+    .rank-1 .match-percent { color: #fac832; }
+    .rank-2 .match-percent { color: #d0d0e0; }
+    .rank-3 .match-percent { color: #e09050; }
+
+    .podium-info {
+      padding: 1rem 1.2rem 1.3rem;
+      background: var(--bg2);
+    }
+    .podium-name { font-size: 1.15rem; font-weight: 800; margin-bottom: .25rem; }
+    .podium-tagline { font-size: .8rem; color: var(--muted); margin-bottom: .8rem; }
+    .match-bar-track {
+      height: 5px; background: rgba(255,255,255,.07); border-radius: 3px; overflow: hidden;
+    }
+    .match-bar-fill {
+      height: 100%; background: var(--grad); border-radius: 3px;
+      width: 0; transition: width 1.2s cubic-bezier(.4,0,.2,1);
+    }
+
+    /* All brands grid */
+    .section-label {
+      text-align: center; font-size: .78rem; font-weight: 700;
+      letter-spacing: .1em; text-transform: uppercase;
+      color: var(--muted); margin-bottom: 1.5rem;
+    }
+    .brands-grid {
+      display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+      gap: 1.3rem; max-width: 1100px; margin: 0 auto;
+    }
+
+    .brand-card {
+      border-radius: 1.25rem; overflow: hidden;
+      border: 1.5px solid var(--border);
+      background: var(--surface); cursor: pointer;
+      transition: all .28s cubic-bezier(.4,0,.2,1);
+      backdrop-filter: blur(8px);
+    }
+    .brand-card:hover {
+      transform: translateY(-5px);
+      border-color: rgba(79,142,247,.4);
+      box-shadow: 0 15px 40px rgba(0,0,0,.4);
+    }
+    .brand-card-img {
+      width: 100%; aspect-ratio: 16/9; overflow: hidden; position: relative;
+    }
+    .brand-card-img img {
+      width: 100%; height: 100%; object-fit: cover;
+      transition: transform .5s; filter: brightness(.8) saturate(1.15);
+    }
+    .brand-card:hover .brand-card-img img { transform: scale(1.07); }
+    .brand-card-img::after {
+      content: ''; position: absolute; inset: 0;
+      background: linear-gradient(to top, rgba(0,0,0,.7) 0%, transparent 60%);
+    }
+
+    .brand-card-body { padding: 1rem 1.15rem 1.25rem; }
+    .brand-meta { display: flex; align-items: center; gap: .5rem; margin-bottom: .4rem; }
+    .brand-country-flag { font-size: 1rem; }
+    .brand-country-name { font-size: .75rem; color: var(--muted); }
+    .brand-card-name { font-size: 1.05rem; font-weight: 800; margin-bottom: .2rem; }
+    .brand-card-tagline { font-size: .8rem; color: var(--muted); margin-bottom: .8rem; }
+    .brand-card-match {
+      display: flex; align-items: center; justify-content: space-between;
+    }
+    .brand-card-pct { font-size: .9rem; font-weight: 800; color: var(--blue); }
+    .mini-bar-track { flex: 1; height: 4px; background: rgba(255,255,255,.07); border-radius: 2px; margin: 0 .8rem; overflow: hidden; }
+    .mini-bar-fill { height: 100%; background: var(--grad); border-radius: 2px; width: 0; transition: width 1.2s .3s cubic-bezier(.4,0,.2,1); }
+
+    .retry-wrap { text-align: center; margin-top: 4rem; }
+    .btn-retry {
+      background: none; border: 1.5px solid var(--border);
+      border-radius: 999px; color: var(--text);
+      padding: .8rem 2rem; font-size: .95rem; font-weight: 600;
+      cursor: pointer; font-family: inherit; transition: all .2s;
+    }
+    .btn-retry:hover { border-color: var(--blue); color: var(--blue); }
+
+    /* ══════════════ MODAL ══════════════ */
+    .modal-overlay {
+      position: fixed; inset: 0; z-index: 100;
+      background: rgba(0,0,0,.75); backdrop-filter: blur(12px);
+      display: flex; align-items: center; justify-content: center;
+      padding: 1.5rem;
+      opacity: 0; pointer-events: none; transition: opacity .3s;
+    }
+    .modal-overlay.open { opacity: 1; pointer-events: auto; }
+
+    .modal {
+      background: var(--bg2); border: 1.5px solid var(--border);
+      border-radius: 1.8rem; overflow: hidden;
+      max-width: 700px; width: 100%; max-height: 90vh;
+      overflow-y: auto; transform: scale(.94) translateY(24px);
+      transition: transform .35s cubic-bezier(.4,0,.2,1);
+    }
+    .modal-overlay.open .modal { transform: none; }
+
+    .modal-hero { position: relative; width: 100%; aspect-ratio: 16/8; overflow: hidden; }
+    .modal-hero img { width: 100%; height: 100%; object-fit: cover; filter: brightness(.8) saturate(1.2); }
+    .modal-hero::after {
+      content: ''; position: absolute; inset: 0;
+      background: linear-gradient(to top, var(--bg2) 0%, transparent 50%);
+    }
+    .modal-hero-info {
+      position: absolute; bottom: 1.5rem; left: 1.8rem; z-index: 1;
+    }
+    .modal-hero-name { font-size: 2rem; font-weight: 900; letter-spacing: -.02em; }
+    .modal-hero-tagline { font-size: .9rem; color: rgba(255,255,255,.65); }
+
+    .modal-close {
+      position: absolute; top: 1rem; right: 1rem; z-index: 10;
+      background: rgba(0,0,0,.5); border: 1px solid rgba(255,255,255,.15);
+      color: #fff; width: 36px; height: 36px; border-radius: 50%;
+      cursor: pointer; font-size: 1.1rem;
+      display: flex; align-items: center; justify-content: center;
+      transition: all .2s; backdrop-filter: blur(8px);
+    }
+    .modal-close:hover { background: rgba(255,255,255,.15); }
+
+    .modal-body { padding: 1.4rem 1.8rem 2rem; }
+
+    .modal-match-block {
+      display: flex; align-items: center; gap: 1rem;
+      background: rgba(79,142,247,.07); border: 1px solid rgba(79,142,247,.2);
+      border-radius: 1rem; padding: 1rem 1.3rem; margin-bottom: 1.5rem;
+    }
+    .modal-match-pct { font-size: 2.2rem; font-weight: 900; background: var(--grad); -webkit-background-clip: text; -webkit-text-fill-color: transparent; }
+    .modal-match-label { font-size: .85rem; color: var(--muted); }
+    .modal-match-bar-track { flex: 1; height: 6px; background: rgba(255,255,255,.07); border-radius: 3px; overflow: hidden; }
+    .modal-match-bar-fill { height: 100%; background: var(--grad); border-radius: 3px; width: 0; transition: width 1s .2s ease; }
+
+    .modal-desc { font-size: .95rem; color: var(--muted); line-height: 1.75; margin-bottom: 1.8rem; }
+
+    .modal-stats { display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; margin-bottom: 1.8rem; }
+    @media(max-width:480px){ .modal-stats { grid-template-columns: 1fr; } }
+    .stat-item { background: var(--surface); border: 1px solid var(--border); border-radius: .8rem; padding: .9rem 1rem; }
+    .stat-label { font-size: .72rem; color: var(--muted); letter-spacing: .06em; text-transform: uppercase; margin-bottom: .3rem; }
+    .stat-value { font-size: .95rem; font-weight: 700; }
+
+    .modal-section-title { font-size: .75rem; font-weight: 700; letter-spacing: .08em; text-transform: uppercase; color: var(--blue); margin-bottom: .8rem; }
+
+    .models-list {
+      display: flex; flex-wrap: wrap; gap: .5rem; margin-bottom: 1.8rem;
+    }
+    .model-chip {
+      background: rgba(79,142,247,.1); border: 1px solid rgba(79,142,247,.25);
+      color: var(--blue); border-radius: 999px;
+      padding: .3rem .85rem; font-size: .82rem; font-weight: 600;
+    }
+
+    .pros-list { list-style: none; display: flex; flex-direction: column; gap: .5rem; }
+    .pros-list li {
+      font-size: .9rem; color: var(--muted); display: flex; gap: .6rem; align-items: flex-start;
+    }
+    .pros-list li::before { content: '✦'; color: var(--blue); flex-shrink: 0; font-size: .8rem; margin-top: .15rem; }
+
+    /* ══════════════ ANIMATIONS ══════════════ */
+    @keyframes fadeUp {
+      from { opacity: 0; transform: translateY(22px); }
+      to   { opacity: 1; transform: translateY(0); }
+    }
+    @keyframes pulse {
+      0%, 100% { opacity: 1; }
+      50%       { opacity: .3; }
+    }
+
+    .fade-in { animation: fadeUp .5s ease both; }
+
+    /* scrollbar */
+    ::-webkit-scrollbar { width: 6px; }
+    ::-webkit-scrollbar-track { background: var(--bg); }
+    ::-webkit-scrollbar-thumb { background: rgba(255,255,255,.12); border-radius: 3px; }
+  </style>
+</head>
+<body>
+
+<!-- Background orbs -->
+<div class="orb orb-1"></div>
+<div class="orb orb-2"></div>
+
+<!-- ═══════════ HERO ═══════════ -->
+<section id="hero">
+  <div class="hero-bg">
+    <img src="https://images.unsplash.com/photo-1492144534655-ae79c964c9d7?w=1600&q=80&auto=format&fit=crop" alt="Hero car" />
+  </div>
+
+  <div style="position:relative;z-index:2;display:flex;flex-direction:column;align-items:center;">
+    <div class="hero-badge">
+      <span></span>
+      나만의 자동차 브랜드 추천
+    </div>
+
+    <h1 class="hero-title">
+      당신에게 완벽한<br/>
+      <span class="grad">자동차 브랜드</span>는?
+    </h1>
+
+    <p class="hero-sub">
+      4가지 간단한 질문에 답하면, 전문 알고리즘이 소비자
+      기호에 맞는 자동차 브랜드를 사진과 함께 소개해드립니다.
+    </p>
+
+    <button class="btn-primary" id="startBtn" onclick="startQuiz()">
+      <span class="btn-icon">🚗</span>
+      지금 시작하기
+    </button>
+
+    <div class="hero-brands">
+      <span class="hero-brand-chip">BMW</span><span class="sep">·</span>
+      <span class="hero-brand-chip">Mercedes-Benz</span><span class="sep">·</span>
+      <span class="hero-brand-chip">Porsche</span><span class="sep">·</span>
+      <span class="hero-brand-chip">Tesla</span><span class="sep">·</span>
+      <span class="hero-brand-chip">Genesis</span><span class="sep">·</span>
+      <span class="hero-brand-chip">그 외 5개 브랜드</span>
+    </div>
+  </div>
+</section>
+
+<!-- ═══════════ QUIZ ═══════════ -->
+<section id="quiz">
+  <div class="quiz-wrap">
+    <div class="quiz-header">
+      <span class="quiz-step-label" id="stepLabel">질문 1 / 4</span>
+      <button class="quiz-back-btn" id="backBtn" onclick="goBack()">← 이전</button>
+    </div>
+    <div class="progress-track">
+      <div class="progress-fill" id="progressFill" style="width:25%"></div>
+    </div>
+    <h2 class="quiz-q" id="quizQ"></h2>
+    <p class="quiz-q-sub" id="quizSub"></p>
+    <div class="options-grid" id="optionsGrid"></div>
+    <div class="quiz-next-wrap">
+      <button class="btn-next" id="nextBtn" onclick="nextStep()">
+        다음 질문 →
+      </button>
+    </div>
+  </div>
+</section>
+
+<!-- ═══════════ RESULTS ═══════════ -->
+<section id="results">
+  <div class="results-header">
+    <p class="results-eyebrow">✦ 분석 완료</p>
+    <h2 class="results-title">회원님을 위한<br/><span style="background:var(--grad);-webkit-background-clip:text;-webkit-text-fill-color:transparent;">추천 브랜드</span></h2>
+    <p class="results-sub" id="resultsSub">답변을 분석한 결과입니다</p>
+  </div>
+
+  <!-- Top 3 Podium -->
+  <div class="podium" id="podium"></div>
+
+  <!-- All brands -->
+  <p class="section-label">전체 브랜드 매칭률</p>
+  <div class="brands-grid" id="brandsGrid"></div>
+
+  <div class="retry-wrap">
+    <button class="btn-retry" onclick="restartQuiz()">🔄 다시 시작하기</button>
+  </div>
+</section>
+
+<!-- ═══════════ MODAL ═══════════ -->
+<div class="modal-overlay" id="modalOverlay" onclick="closeModal(event)">
+  <div class="modal" id="modal">
+    <div class="modal-hero" id="modalHero">
+      <button class="modal-close" onclick="closeModalDirect()">✕</button>
+      <img id="modalImg" src="" alt="" />
+      <div class="modal-hero-info">
+        <div class="modal-hero-name" id="modalName"></div>
+        <div class="modal-hero-tagline" id="modalTagline"></div>
+      </div>
+    </div>
+    <div class="modal-body">
+      <div class="modal-match-block">
+        <div>
+          <div class="modal-match-pct" id="modalPct"></div>
+          <div class="modal-match-label">매칭률</div>
+        </div>
+        <div class="modal-match-bar-track">
+          <div class="modal-match-bar-fill" id="modalBar"></div>
+        </div>
+      </div>
+      <p class="modal-desc" id="modalDesc"></p>
+      <div class="modal-stats" id="modalStats"></div>
+      <p class="modal-section-title">인기 모델</p>
+      <div class="models-list" id="modalModels"></div>
+      <p class="modal-section-title">주요 특징</p>
+      <ul class="pros-list" id="modalPros"></ul>
+    </div>
+  </div>
+</div>
+
+<script>
+// ════════════════════════════════════════════
+//  DATA
+// ════════════════════════════════════════════
+const questions = [
+  {
+    q: "주로 어떤 목적으로 차를 사용하시나요?",
+    sub: "가장 많이 활용할 상황을 선택해주세요.",
+    key: "purpose",
+    options: [
+      { icon: "🏙️", title: "도심 출퇴근 / 일상 주행", desc: "교통체증·주차·연비가 중요한 도심 라이프", value: "commute" },
+      { icon: "🏎️", title: "스포츠 & 퍼포먼스", desc: "드라이빙 성능과 짜릿한 가속감 추구", value: "sports" },
+      { icon: "👨‍👩‍👧", title: "가족 & 레저 여행", desc: "넓은 공간, 안전, 편안함이 최우선", value: "family" },
+      { icon: "🏔️", title: "오프로드 & 아웃도어", desc: "거친 지형과 야외 활동을 즐기는 라이프", value: "offroad" },
+    ]
+  },
+  {
+    q: "예산 범위는 어떻게 되시나요?",
+    sub: "출고가 기준으로 선택해주세요.",
+    key: "budget",
+    options: [
+      { icon: "💰", title: "3,000만원 이하", desc: "합리적인 가격으로 최고의 가성비", value: "low" },
+      { icon: "💰💰", title: "3,000 ~ 6,000만원", desc: "프리미엄 준중형 ~ 중형 세그먼트", value: "mid" },
+      { icon: "💰💰💰", title: "6,000만원 ~ 1억원", desc: "고급 브랜드의 주력 모델", value: "high" },
+      { icon: "💎", title: "1억원 이상", desc: "플래그십 & 하이엔드 럭셔리", value: "luxury" },
+    ]
+  },
+  {
+    q: "어떤 스타일을 선호하시나요?",
+    sub: "이미지와 디자인 감성을 선택해주세요.",
+    key: "style",
+    options: [
+      { icon: "✨", title: "세련되고 고급스러운", desc: "클래식하지만 현대적인 럭셔리 감성", value: "elegant" },
+      { icon: "🔥", title: "역동적이고 스포티한", desc: "날카로운 라인과 공격적인 디자인", value: "sporty" },
+      { icon: "🌿", title: "친환경 & 미래지향적", desc: "전기차·플러그인 하이브리드 선호", value: "eco" },
+      { icon: "🛡️", title: "안전하고 믿음직한", desc: "견고하고 편안한 패밀리 감성", value: "safe" },
+    ]
+  },
+  {
+    q: "자동차에서 가장 중요한 것은 무엇인가요?",
+    sub: "우선순위를 딱 하나만 고르세요.",
+    key: "priority",
+    options: [
+      { icon: "🎯", title: "성능 & 드라이빙 즐거움", desc: "엔진 파워, 핸들링, 순수한 운전 재미", value: "performance" },
+      { icon: "👑", title: "브랜드 명성 & 프레스티지", desc: "이름만으로도 격이 달라지는 브랜드", value: "prestige" },
+      { icon: "💡", title: "기술 혁신 & 첨단 기능", desc: "최신 ADAS, 인포테인먼트, OTA 업데이트", value: "tech" },
+      { icon: "🤝", title: "가성비 & 실용성", desc: "유지비·내구성·넓은 공간 우선", value: "value" },
+    ]
+  }
+];
+
+const brands = [
+  {
+    id: "bmw",
+    name: "BMW",
+    country: "독일",
+    flag: "🇩🇪",
+    founded: 1916,
+    tagline: "Sheer Driving Pleasure",
+    image: "https://images.unsplash.com/photo-1555215695-3004980ad54e?w=900&q=80&auto=format&fit=crop",
+    description: "뛰어난 주행 성능과 스포티한 디자인으로 전 세계적으로 사랑받는 독일 프리미엄 브랜드입니다. '운전을 위한 자동차'라는 철학 아래 정교한 서스펜션 세팅과 강력한 엔진 라인업을 갖추고 있으며, M 퍼포먼스 시리즈는 서킷에서도 손색없는 퍼포먼스를 자랑합니다.",
+    priceRange: "4,500만원 ~ 3억원+",
+    segment: "프리미엄 / 스포티",
+    popularModels: ["3 Series", "5 Series", "X5", "M3", "M5"],
+    pros: ["탁월한 주행 성능 & 핸들링", "강력한 6기통·8기통 엔진 라인업", "스포티하고 역동적인 디자인", "xDrive AWD 시스템", "M Performance 고성능 라인업"],
+    scores: { commute:2, sports:5, family:2, offroad:1, low:0, mid:3, high:5, luxury:4, elegant:4, sporty:5, eco:2, safe:3, performance:5, prestige:4, tech:4, value:2 }
+  },
+  {
+    id: "mercedes",
+    name: "Mercedes-Benz",
+    country: "독일",
+    flag: "🇩🇪",
+    founded: 1926,
+    tagline: "The Best or Nothing",
+    image: "https://images.unsplash.com/photo-1618843479313-40f8afb4b4d8?w=900&q=80&auto=format&fit=crop",
+    description: "100년이 넘는 역사 속에서 럭셔리 자동차의 대명사로 자리 잡은 브랜드입니다. S-Class의 탁월한 승차감, 최첨단 MBUX 인포테인먼트 시스템, 그리고 클래식한 우아함이 완벽하게 균형을 이루고 있습니다. AMG 라인업은 강력한 퍼포먼스까지 갖추고 있습니다.",
+    priceRange: "5,000만원 ~ 5억원+",
+    segment: "최고급 럭셔리",
+    popularModels: ["E-Class", "S-Class", "GLE", "AMG GT", "EQS"],
+    pros: ["최고 수준의 승차감", "화려하고 고급스러운 인테리어", "첨단 MBUX 인포테인먼트", "S-Class 플래그십 위상", "EQ 전기차 라인업"],
+    scores: { commute:2, sports:3, family:3, offroad:1, low:0, mid:2, high:4, luxury:5, elegant:5, sporty:3, eco:3, safe:5, performance:3, prestige:5, tech:4, value:1 }
+  },
+  {
+    id: "audi",
+    name: "Audi",
+    country: "독일",
+    flag: "🇩🇪",
+    founded: 1909,
+    tagline: "Vorsprung durch Technik",
+    image: "https://images.unsplash.com/photo-1606664515524-ed2f786a0bd6?w=900&q=80&auto=format&fit=crop",
+    description: "기술 혁신을 통한 진보를 추구하는 독일 프리미엄 브랜드입니다. 완성도 높은 quattro AWD 시스템, 정교한 Virtual Cockpit 디지털 계기반, 그리고 인체공학적으로 설계된 인테리어가 특징입니다. e-tron 전기차 라인업도 빠르게 성장하고 있습니다.",
+    priceRange: "4,500만원 ~ 2.5억원",
+    segment: "기술 & 프리미엄",
+    popularModels: ["A4", "A6", "Q5", "Q8", "RS7"],
+    pros: ["quattro 상시 사륜구동 시스템", "Virtual Cockpit 디지털 계기판", "높은 실내 마감 품질", "RS 고성능 라인업", "e-tron 전기차 선택지"],
+    scores: { commute:3, sports:4, family:3, offroad:2, low:0, mid:3, high:5, luxury:4, elegant:4, sporty:4, eco:3, safe:4, performance:4, prestige:4, tech:5, value:2 }
+  },
+  {
+    id: "porsche",
+    name: "Porsche",
+    country: "독일",
+    flag: "🇩🇪",
+    founded: 1931,
+    tagline: "There Is No Substitute",
+    image: "https://images.unsplash.com/photo-1503376780353-7e6692767b70?w=900&q=80&auto=format&fit=crop",
+    description: "순수한 드라이빙 쾌감과 초고성능 퍼포먼스의 상징입니다. 911 GT3는 세계 최고 수준의 서킷용 로드카이며, Cayenne과 Macan은 SUV에도 포르쉐의 DNA를 그대로 담아냈습니다. Taycan은 전기차의 새로운 지평을 열었습니다.",
+    priceRange: "8,000만원 ~ 5억원+",
+    segment: "슈퍼스포츠 / 하이엔드",
+    popularModels: ["911 Carrera", "911 GT3", "Cayenne", "Taycan", "Panamera"],
+    pros: ["세계 최고 수준의 드라이빙 다이나믹스", "아이코닉한 911 디자인", "Taycan 전기차의 뛰어난 퍼포먼스", "레이스에서 검증된 기술력", "강력한 브랜드 헤리티지"],
+    scores: { commute:1, sports:5, family:1, offroad:1, low:0, mid:0, high:3, luxury:5, elegant:3, sporty:5, eco:3, safe:2, performance:5, prestige:5, tech:4, value:1 }
+  },
+  {
+    id: "tesla",
+    name: "Tesla",
+    country: "미국",
+    flag: "🇺🇸",
+    founded: 2003,
+    tagline: "Accelerating Sustainable Energy",
+    image: "https://images.unsplash.com/photo-1560958089-b8a1929cea89?w=900&q=80&auto=format&fit=crop",
+    description: "전기차 혁명을 이끈 미국 기술 기업으로, 자동차 산업의 패러다임을 바꿨습니다. OTA 소프트웨어 업데이트, 오토파일럿 자율주행, 거대한 터치스크린 UI, 초고속 충전 슈퍼차저 네트워크 등 기술 혁신을 선도합니다.",
+    priceRange: "5,500만원 ~ 1.5억원",
+    segment: "전기차 / 첨단 기술",
+    popularModels: ["Model 3", "Model Y", "Model S", "Model X", "Cybertruck"],
+    pros: ["완전 전기차, 주유비 제로", "업계 최고 OTA 소프트웨어 업데이트", "오토파일럿 & FSD 자율주행", "슈퍼차저 급속충전 네트워크", "최고 수준의 에너지 효율"],
+    scores: { commute:4, sports:3, family:3, offroad:1, low:0, mid:4, high:5, luxury:3, elegant:3, sporty:3, eco:5, safe:4, performance:3, prestige:3, tech:5, value:3 }
+  },
+  {
+    id: "genesis",
+    name: "Genesis",
+    country: "한국",
+    flag: "🇰🇷",
+    founded: 2015,
+    tagline: "Athletic Elegance",
+    image: "https://images.unsplash.com/photo-1609521263047-f8f205293f24?w=900&q=80&auto=format&fit=crop",
+    description: "현대자동차그룹의 럭셔리 브랜드로, 대담한 디자인과 합리적인 가격으로 세계 시장에서 빠르게 인정받고 있습니다. G80·GV80은 메르세데스·BMW와 어깨를 나란히 하며, 국내 수입차를 대체하는 강력한 선택지입니다.",
+    priceRange: "5,000만원 ~ 1.5억원",
+    segment: "한국형 럭셔리",
+    popularModels: ["G80", "G90", "GV80", "GV70", "GV60"],
+    pros: ["공격적이고 독창적인 디자인", "가격 대비 최고의 사양", "뛰어난 홈서비스 & 픽업 딜리버리", "전기차 전용 GV60·G80e 라인업", "국내 AS 네트워크"],
+    scores: { commute:3, sports:2, family:4, offroad:2, low:0, mid:4, high:5, luxury:3, elegant:5, sporty:2, eco:3, safe:4, performance:2, prestige:4, tech:4, value:3 }
+  },
+  {
+    id: "toyota",
+    name: "Toyota",
+    country: "일본",
+    flag: "🇯🇵",
+    founded: 1937,
+    tagline: "Let's Go Places",
+    image: "https://images.unsplash.com/photo-1621007947382-bb3c3994e3fb?w=900&q=80&auto=format&fit=crop",
+    description: "세계에서 가장 많이 팔리는 자동차 브랜드 중 하나로, 압도적인 신뢰성과 낮은 유지비가 최고 강점입니다. 하이브리드 기술의 선구자로 프리우스를 시작으로 거의 모든 모델에 하이브리드 옵션을 제공합니다.",
+    priceRange: "2,500만원 ~ 1억원",
+    segment: "신뢰성 / 하이브리드",
+    popularModels: ["Camry", "RAV4", "Prius", "Land Cruiser", "GR86"],
+    pros: ["세계 정상급 신뢰성 & 내구성", "낮은 유지비와 저렴한 수리비", "하이브리드 기술 선구자", "전 세계 최고 수준 잔존가치", "GR 스포츠 퍼포먼스 라인업"],
+    scores: { commute:5, sports:2, family:5, offroad:3, low:4, mid:5, high:2, luxury:1, elegant:2, sporty:2, eco:5, safe:5, performance:2, prestige:2, tech:3, value:5 }
+  },
+  {
+    id: "hyundai",
+    name: "Hyundai",
+    country: "한국",
+    flag: "🇰🇷",
+    founded: 1967,
+    tagline: "New Thinking, New Possibilities",
+    image: "https://images.unsplash.com/photo-1526726538690-5cbf956ae2fd?w=900&q=80&auto=format&fit=crop",
+    description: "합리적인 가격과 뛰어난 가성비로 전 세계에서 사랑받는 한국 브랜드입니다. IONIQ 5·6는 글로벌 전기차 시장에서 높은 평가를 받고 있으며, 넓은 실내와 풍부한 기본 사양이 장점입니다.",
+    priceRange: "2,000만원 ~ 8,000만원",
+    segment: "가성비 / 실용",
+    popularModels: ["Sonata", "Tucson", "IONIQ 5", "IONIQ 6", "Santa Fe"],
+    pros: ["뛰어난 가성비 & 기본 사양", "IONIQ 전기차 글로벌 수상", "넓은 실내 공간", "빠른 기술 혁신 속도", "국내 A/S 네트워크"],
+    scores: { commute:5, sports:1, family:5, offroad:2, low:5, mid:5, high:2, luxury:0, elegant:2, sporty:2, eco:4, safe:4, performance:1, prestige:1, tech:4, value:5 }
+  },
+  {
+    id: "jeep",
+    name: "Jeep",
+    country: "미국",
+    flag: "🇺🇸",
+    founded: 1941,
+    tagline: "Go Anywhere. Do Anything.",
+    image: "https://images.unsplash.com/photo-1533473359331-0135ef1b58bf?w=900&q=80&auto=format&fit=crop",
+    description: "오프로드의 전설이자 아웃도어 라이프스타일의 아이콘입니다. Wrangler는 세계에서 가장 유명한 오프로드 차량으로, 암반 돌파 능력이 타의 추종을 불허합니다. 자유와 모험을 상징하는 독보적인 헤리티지를 가지고 있습니다.",
+    priceRange: "4,500만원 ~ 1.2억원",
+    segment: "오프로드 / 어드벤처",
+    popularModels: ["Wrangler", "Grand Cherokee", "Gladiator", "Renegade", "4xe"],
+    pros: ["세계 최고의 오프로드 능력", "Trail Rated 독보적 바위 극복력", "상징적인 Wrangler 아이코닉 디자인", "강력한 커스터마이징 커뮤니티", "4xe 플러그인 하이브리드 옵션"],
+    scores: { commute:1, sports:2, family:3, offroad:5, low:0, mid:4, high:4, luxury:2, elegant:1, sporty:3, eco:2, safe:3, performance:3, prestige:3, tech:2, value:2 }
+  },
+  {
+    id: "volvo",
+    name: "Volvo",
+    country: "스웨덴",
+    flag: "🇸🇪",
+    founded: 1927,
+    tagline: "For Life",
+    image: "https://images.unsplash.com/photo-1544636331-e26879cd4d9b?w=900&q=80&auto=format&fit=crop",
+    description: "세계에서 가장 안전한 자동차를 만드는 스웨덴 브랜드입니다. 안전 기술의 선구자로 3점식 안전벨트를 세상에 선물했으며, 2020년대 이후 모든 신차에 속도 제한 장치를 탑재합니다. 북유럽 감성의 미니멀 디자인이 특징입니다.",
+    priceRange: "5,500만원 ~ 1.5억원",
+    segment: "안전 / 가족 / 스칸디나비아",
+    popularModels: ["XC60", "XC90", "S60", "EX30", "EX90"],
+    pros: ["세계 최고 수준의 안전 기술", "북유럽 미니멀 감성 디자인", "BLIS 사각지대 경고 시스템 원조", "가족 친화적인 넓은 실내", "EX30·EX90 전기차 선택지"],
+    scores: { commute:3, sports:1, family:5, offroad:2, low:0, mid:3, high:5, luxury:3, elegant:5, sporty:1, eco:4, safe:5, performance:1, prestige:3, tech:3, value:3 }
+  }
+];
+
+// ════════════════════════════════════════════
+//  STATE
+// ════════════════════════════════════════════
+let currentStep = 0;
+let answers = {};
+
+// ════════════════════════════════════════════
+//  QUIZ LOGIC
+// ════════════════════════════════════════════
+function startQuiz() {
+  document.getElementById("hero").style.display = "none";
+  document.getElementById("quiz").classList.add("active");
+  renderQuestion();
+}
+
+function renderQuestion() {
+  const q = questions[currentStep];
+  document.getElementById("stepLabel").textContent = `질문 ${currentStep + 1} / ${questions.length}`;
+  document.getElementById("progressFill").style.width = `${((currentStep + 1) / questions.length) * 100}%`;
+  document.getElementById("quizQ").textContent = q.q;
+  document.getElementById("quizSub").textContent = q.sub;
+  document.getElementById("backBtn").style.visibility = currentStep === 0 ? "hidden" : "visible";
+
+  const grid = document.getElementById("optionsGrid");
+  grid.innerHTML = "";
+
+  const selected = answers[q.key];
+  q.options.forEach((opt, i) => {
+    const div = document.createElement("div");
+    div.className = "option-card" + (selected === opt.value ? " selected" : "");
+    div.style.animationDelay = `${i * 0.07}s`;
+    div.innerHTML = `
+      <div class="opt-icon">${opt.icon}</div>
+      <div class="opt-texts">
+        <div class="opt-title">${opt.title}</div>
+        <div class="opt-desc">${opt.desc}</div>
+      </div>`;
+    div.addEventListener("click", () => selectOption(opt.value));
+    grid.appendChild(div);
+  });
+
+  updateNextBtn();
+}
+
+function selectOption(value) {
+  answers[questions[currentStep].key] = value;
+  document.querySelectorAll(".option-card").forEach(c => c.classList.remove("selected"));
+  const allOpts = document.querySelectorAll(".option-card");
+  const q = questions[currentStep];
+  const idx = q.options.findIndex(o => o.value === value);
+  if (allOpts[idx]) allOpts[idx].classList.add("selected");
+  updateNextBtn();
+}
+
+function updateNextBtn() {
+  const btn = document.getElementById("nextBtn");
+  const q = questions[currentStep];
+  if (answers[q.key]) {
+    btn.classList.add("visible");
+    btn.textContent = currentStep === questions.length - 1 ? "결과 보기 🎉" : "다음 질문 →";
+  } else {
+    btn.classList.remove("visible");
+  }
+}
+
+function nextStep() {
+  if (!answers[questions[currentStep].key]) return;
+  if (currentStep < questions.length - 1) {
+    currentStep++;
+    renderQuestion();
+  } else {
+    showResults();
+  }
+}
+
+function goBack() {
+  if (currentStep > 0) {
+    currentStep--;
+    renderQuestion();
+  }
+}
+
+// ════════════════════════════════════════════
+//  SCORING
+// ════════════════════════════════════════════
+function calcScores() {
+  return brands.map(b => {
+    const s = b.scores;
+    const raw = (s[answers.purpose] || 0) + (s[answers.budget] || 0) + (s[answers.style] || 0) + (s[answers.priority] || 0);
+    return { ...b, raw };
+  }).sort((a, b) => b.raw - a.raw);
+}
+
+// ════════════════════════════════════════════
+//  RESULTS
+// ════════════════════════════════════════════
+function showResults() {
+  document.getElementById("quiz").classList.remove("active");
+  const res = document.getElementById("results");
+  res.classList.add("active");
+
+  const scored = calcScores();
+  const maxRaw = scored[0].raw;
+
+  // Sub-text
+  const top = scored[0];
+  const purposeLabel = { commute:"도심 주행", sports:"스포츠 퍼포먼스", family:"가족 레저", offroad:"오프로드 어드벤처" };
+  document.getElementById("resultsSub").textContent =
+    `${purposeLabel[answers.purpose]} · ${answers.budget === "low" ? "3천만원 이하" : answers.budget === "mid" ? "3천~6천만원" : answers.budget === "high" ? "6천~1억" : "1억 이상"} 예산 기준으로 분석했습니다`;
+
+  // Podium (top 3)
+  const podium = document.getElementById("podium");
+  podium.innerHTML = "";
+  const rankLabel = ["🥇 1위", "🥈 2위", "🥉 3위"];
+  const rankClass = ["rank-1", "rank-2", "rank-3"];
+
+  [scored[0], scored[1], scored[2]].forEach((b, i) => {
+    const pct = Math.round((b.raw / maxRaw) * 100);
+    const div = document.createElement("div");
+    div.className = `podium-card ${rankClass[i]} fade-in`;
+    div.style.animationDelay = `${i * 0.12}s`;
+    div.onclick = () => openModal(b, pct);
+    div.innerHTML = `
+      <div class="podium-img-wrap">
+        <span class="podium-rank-badge">${rankLabel[i]}</span>
+        <img src="${b.image}" alt="${b.name}" loading="lazy" onerror="this.style.background='#1a1a2e';this.src=''"/>
+        <div class="match-percent">${pct}%</div>
+      </div>
+      <div class="podium-info">
+        <div class="podium-name">${b.flag} ${b.name}</div>
+        <div class="podium-tagline">${b.tagline}</div>
+        <div class="match-bar-track">
+          <div class="match-bar-fill" data-pct="${pct}"></div>
+        </div>
+      </div>`;
+    podium.appendChild(div);
+  });
+
+  // All brands grid
+  const grid = document.getElementById("brandsGrid");
+  grid.innerHTML = "";
+  scored.forEach((b, i) => {
+    const pct = Math.round((b.raw / maxRaw) * 100);
+    const div = document.createElement("div");
+    div.className = "brand-card fade-in";
+    div.style.animationDelay = `${i * 0.06}s`;
+    div.onclick = () => openModal(b, pct);
+    div.innerHTML = `
+      <div class="brand-card-img">
+        <img src="${b.image}" alt="${b.name}" loading="lazy" onerror="this.style.background='#1a1a2e';this.src=''"/>
+      </div>
+      <div class="brand-card-body">
+        <div class="brand-meta">
+          <span class="brand-country-flag">${b.flag}</span>
+          <span class="brand-country-name">${b.country} · ${b.segment}</span>
+        </div>
+        <div class="brand-card-name">${b.name}</div>
+        <div class="brand-card-tagline">${b.tagline}</div>
+        <div class="brand-card-match">
+          <span class="brand-card-pct">${pct}%</span>
+          <div class="mini-bar-track"><div class="mini-bar-fill" data-pct="${pct}"></div></div>
+          <span style="font-size:.75rem;color:var(--muted)">#${i+1}</span>
+        </div>
+      </div>`;
+    grid.appendChild(div);
+  });
+
+  // Animate bars after render
+  setTimeout(() => {
+    document.querySelectorAll(".match-bar-fill, .mini-bar-fill").forEach(el => {
+      el.style.width = el.dataset.pct + "%";
+    });
+  }, 200);
+
+  window.scrollTo({ top: 0, behavior: "smooth" });
+}
+
+// ════════════════════════════════════════════
+//  MODAL
+// ════════════════════════════════════════════
+function openModal(brand, pct) {
+  document.getElementById("modalImg").src = brand.image;
+  document.getElementById("modalImg").alt = brand.name;
+  document.getElementById("modalName").textContent = `${brand.flag} ${brand.name}`;
+  document.getElementById("modalTagline").textContent = brand.tagline;
+  document.getElementById("modalPct").textContent = pct + "%";
+  document.getElementById("modalDesc").textContent = brand.description;
+
+  // Stats
+  document.getElementById("modalStats").innerHTML = `
+    <div class="stat-item"><div class="stat-label">🌍 생산국</div><div class="stat-value">${brand.country}</div></div>
+    <div class="stat-item"><div class="stat-label">📅 설립연도</div><div class="stat-value">${brand.founded}년</div></div>
+    <div class="stat-item"><div class="stat-label">💰 가격대</div><div class="stat-value">${brand.priceRange}</div></div>
+    <div class="stat-item"><div class="stat-label">🏷️ 세그먼트</div><div class="stat-value">${brand.segment}</div></div>
+  `;
+
+  // Models
+  document.getElementById("modalModels").innerHTML = brand.popularModels.map(m =>
+    `<span class="model-chip">${m}</span>`).join("");
+
+  // Pros
+  document.getElementById("modalPros").innerHTML = brand.pros.map(p =>
+    `<li>${p}</li>`).join("");
+
+  const overlay = document.getElementById("modalOverlay");
+  overlay.classList.add("open");
+  document.body.style.overflow = "hidden";
+
+  setTimeout(() => {
+    document.getElementById("modalBar").style.width = pct + "%";
+  }, 200);
+}
+
+function closeModal(e) {
+  if (e.target === document.getElementById("modalOverlay")) closeModalDirect();
+}
+function closeModalDirect() {
+  document.getElementById("modalOverlay").classList.remove("open");
+  document.getElementById("modalBar").style.width = "0";
+  document.body.style.overflow = "";
+}
+
+// ════════════════════════════════════════════
+//  RESTART
+// ════════════════════════════════════════════
+function restartQuiz() {
+  currentStep = 0;
+  answers = {};
+  document.getElementById("results").classList.remove("active");
+  document.getElementById("hero").style.display = "";
+  document.getElementById("quiz").classList.remove("active");
+  window.scrollTo({ top: 0, behavior: "smooth" });
+}
+
+// keyboard close
+document.addEventListener("keydown", e => {
+  if (e.key === "Escape") closeModalDirect();
+});
+</script>
+</body>
+</html>
